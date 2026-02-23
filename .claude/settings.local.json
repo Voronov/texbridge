@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make latex:*)",
+      "Bash(grep:*)",
+      "Bash(sort:*)",
+      "Bash(rm -rf build && make check 2>&1)",
+      "Bash(tail:*)",
+      "Bash(ls:*)",
+      "Bash(rm -rf build DIPLOM.docx && make docx 2>&1)",
+      "Bash(ls -lh DIPLOM.docx && make help 2>&1)",
+      "Bash(head:*)",
+      "Bash(make docx:*)",
+      "Bash(rm -rf /Users/sv/Projects/MY/diplom/build /Users/sv/Projects/MY/diplom/DIPLOM.docx && make -C /Users/sv/Projects/MY/diplom docx 2>&1)",
+      "Bash(rm -rf /Users/sv/Projects/MY/diplom/build && make -C /Users/sv/Projects/MY/diplom docx 2>&1)",
+      "WebSearch",
+      "WebFetch(domain:zp.edu.ua)",
+      "WebFetch(domain:ivt.kpi.ua)",
+      "WebFetch(domain:www.duet.edu.ua)",
+      "WebFetch(domain:www.pdau.edu.ua)",
+      "WebFetch(domain:dnaop.com)",
+      "WebFetch(domain:science.kname.edu.ua)",
+      "WebFetch(domain:ep.kpi.ua)",
+      "WebFetch(domain:web.posibnyky.vntu.edu.ua)",
+      "WebFetch(domain:www.calameo.com)",
+      "WebFetch(domain:studopedia.su)",
+      "WebFetch(domain:studopedia.net)",
+      "WebFetch(domain:www.grafiati.com)",
+      "WebFetch(domain:software.nure.ua)",
+      "WebFetch(domain:mivt.nmu.org.ua)",
+      "WebFetch(domain:xn--d1aijeje.xn--j1amh)",
+      "WebFetch(domain:kursach.in.ua)",
+      "WebFetch(domain:kerivnyk.info)",
+      "WebFetch(domain:referat.kiev.ua)",
+      "Bash(python3:*)",
+      "Bash(make:*)",
+      "Bash(open:*)",
+      "WebFetch(domain:studfile.net)"
+    ]
+  }
+}

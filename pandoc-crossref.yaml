@@ -1,0 +1,37 @@
+# pandoc-crossref configuration for Ukrainian university standard (ДСТУ 3008:2015)
+
+# Figure settings
+figureTitle: "Рисунок"
+figPrefix: "рис."
+figPrefixTemplate: "$$figPrefix$$&nbsp;$$i$$"
+figLabels: arabic
+figureTemplate: "$$figureTitle$$ $$i$$ — $$t$$"
+subfigureTemplate: "$$figureTitle$$ $$i$$ — $$t$$"
+
+# Table settings
+tableTitle: "Таблиця"
+tblPrefix: "табл."
+tblPrefixTemplate: "$$tblPrefix$$&nbsp;$$i$$"
+tableTemplate: "$$tableTitle$$ $$i$$ — $$t$$"
+
+# Equation settings
+eqnPrefix: ""
+eqnPrefixTemplate: "($$i$$)"
+eqLabels: arabic
+
+# Section numbering
+chaptersDepth: 1
+sectionsDepth: 3
+numberSections: true
+
+# Cross-reference formatting
+linkReferences: true
+nameInLink: false
+
+# Use chapter-based numbering (X.Y format)
+chapters: true
+chapDelim: "."
+
+# Listing settings
+lstPrefix: "лістинг"
+lstTitle: "Лістинг"
