@@ -9,6 +9,42 @@ from docx.oxml.ns import qn
 import sys
 
 
+def set_font_all_ranges(style, font_name):
+    """Set font for ALL character ranges and remove Word theme font overrides.
+
+    python-docx's font.name only sets the ASCII range. Word defaults to
+    Calibri for other ranges via theme fonts. This sets all four ranges
+    explicitly and removes theme references.
+    """
+    rPr = style.element.find(qn('w:rPr'))
+    if rPr is None:
+        rPr = style.element.makeelement(qn('w:rPr'), {})
+        style.element.append(rPr)
+    rFonts = rPr.find(qn('w:rFonts'))
+    if rFonts is None:
+        rFonts = rPr.makeelement(qn('w:rFonts'), {})
+        rPr.append(rFonts)
+    # Set explicit font for all ranges
+    rFonts.set(qn('w:ascii'), font_name)
+    rFonts.set(qn('w:hAnsi'), font_name)
+    rFonts.set(qn('w:cs'), font_name)
+    rFonts.set(qn('w:eastAsia'), font_name)
+    # Remove theme font references that override explicit fonts
+    for attr in ['asciiTheme', 'hAnsiTheme', 'cstheme', 'eastAsiaTheme']:
+        key = qn(f'w:{attr}')
+        if key in rFonts.attrib:
+            del rFonts.attrib[key]
+
+
+def remove_heading_color(style):
+    """Remove color overrides from heading styles (Word defaults to blue)."""
+    rpr = style.element.find(qn('w:rPr'))
+    if rpr is not None:
+        color = rpr.find(qn('w:color'))
+        if color is not None:
+            rpr.remove(color)
+
+
 def create_reference_doc(output_path):
     doc = Document()
 
@@ -46,9 +82,9 @@ def create_reference_doc(output_path):
 
     # --- Default paragraph style (Body Text / Normal) ---
     style = doc.styles['Normal']
-    font = style.font
-    font.name = 'Times New Roman'
-    font.size = Pt(14)
+    style.font.name = 'Times New Roman'
+    style.font.size = Pt(14)
+    set_font_all_ranges(style, 'Times New Roman')
     pf = style.paragraph_format
     pf.line_spacing = 1.5
     pf.space_before = Pt(0)
@@ -63,6 +99,7 @@ def create_reference_doc(output_path):
         body_style = doc.styles['Body Text']
     body_style.font.name = 'Times New Roman'
     body_style.font.size = Pt(14)
+    set_font_all_ranges(body_style, 'Times New Roman')
     body_style.paragraph_format.line_spacing = 1.5
     body_style.paragraph_format.space_before = Pt(0)
     body_style.paragraph_format.space_after = Pt(0)
@@ -76,6 +113,7 @@ def create_reference_doc(output_path):
         fp_style = doc.styles['First Paragraph']
     fp_style.font.name = 'Times New Roman'
     fp_style.font.size = Pt(14)
+    set_font_all_ranges(fp_style, 'Times New Roman')
     fp_style.paragraph_format.line_spacing = 1.5
     fp_style.paragraph_format.space_before = Pt(0)
     fp_style.paragraph_format.space_after = Pt(0)
@@ -87,19 +125,15 @@ def create_reference_doc(output_path):
     h1.font.name = 'Times New Roman'
     h1.font.size = Pt(14)
     h1.font.bold = True
-    h1.font.color.rgb = None  # Black (reset any color)
-    h1.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    h1.font.color.rgb = None
+    set_font_all_ranges(h1, 'Times New Roman')
+    remove_heading_color(h1)
+    h1.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
     h1.paragraph_format.space_before = Pt(0)
     h1.paragraph_format.space_after = Pt(12)
     h1.paragraph_format.first_line_indent = Cm(0)
     h1.paragraph_format.line_spacing = 1.5
     h1.paragraph_format.page_break_before = True
-    # Remove color override
-    rpr = h1.element.find(qn('w:rPr'))
-    if rpr is not None:
-        color = rpr.find(qn('w:color'))
-        if color is not None:
-            rpr.remove(color)
 
     # --- Heading 2: Підрозділ (bold, left with indent, 14pt) ---
     h2 = doc.styles['Heading 2']
@@ -107,16 +141,13 @@ def create_reference_doc(output_path):
     h2.font.size = Pt(14)
     h2.font.bold = True
     h2.font.color.rgb = None
+    set_font_all_ranges(h2, 'Times New Roman')
+    remove_heading_color(h2)
     h2.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
     h2.paragraph_format.space_before = Pt(12)
     h2.paragraph_format.space_after = Pt(6)
     h2.paragraph_format.first_line_indent = Cm(1.25)
     h2.paragraph_format.line_spacing = 1.5
-    rpr = h2.element.find(qn('w:rPr'))
-    if rpr is not None:
-        color = rpr.find(qn('w:color'))
-        if color is not None:
-            rpr.remove(color)
 
     # --- Heading 3: Пункт (bold, left with indent, 14pt) ---
     h3 = doc.styles['Heading 3']
@@ -124,16 +155,26 @@ def create_reference_doc(output_path):
     h3.font.size = Pt(14)
     h3.font.bold = True
     h3.font.color.rgb = None
+    set_font_all_ranges(h3, 'Times New Roman')
+    remove_heading_color(h3)
     h3.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
     h3.paragraph_format.space_before = Pt(6)
     h3.paragraph_format.space_after = Pt(6)
     h3.paragraph_format.first_line_indent = Cm(1.25)
     h3.paragraph_format.line_spacing = 1.5
-    rpr = h3.element.find(qn('w:rPr'))
-    if rpr is not None:
-        color = rpr.find(qn('w:color'))
-        if color is not None:
-            rpr.remove(color)
+
+    # --- Heading 4 (if exists) ---
+    if 'Heading 4' in [s.name for s in doc.styles]:
+        h4 = doc.styles['Heading 4']
+        h4.font.name = 'Times New Roman'
+        h4.font.size = Pt(14)
+        h4.font.bold = False
+        h4.font.color.rgb = None
+        set_font_all_ranges(h4, 'Times New Roman')
+        remove_heading_color(h4)
+        h4.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        h4.paragraph_format.first_line_indent = Cm(1.25)
+        h4.paragraph_format.line_spacing = 1.5
 
     # --- Caption style (for figures/tables) ---
     if 'Caption' not in [s.name for s in doc.styles]:
@@ -144,6 +185,7 @@ def create_reference_doc(output_path):
     cap_style.font.size = Pt(14)
     cap_style.font.italic = False
     cap_style.font.color.rgb = None
+    set_font_all_ranges(cap_style, 'Times New Roman')
     cap_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
     cap_style.paragraph_format.space_before = Pt(6)
     cap_style.paragraph_format.space_after = Pt(6)
@@ -157,6 +199,7 @@ def create_reference_doc(output_path):
         fig_style = doc.styles['Figure']
     fig_style.font.name = 'Times New Roman'
     fig_style.font.size = Pt(14)
+    set_font_all_ranges(fig_style, 'Times New Roman')
     fig_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
     fig_style.paragraph_format.first_line_indent = Cm(0)
 
@@ -166,6 +209,7 @@ def create_reference_doc(output_path):
         toc.font.name = 'Times New Roman'
         toc.font.size = Pt(14)
         toc.font.bold = True
+        set_font_all_ranges(toc, 'Times New Roman')
         toc.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # --- Source Code style (for verbatim/code blocks) ---
@@ -175,6 +219,7 @@ def create_reference_doc(output_path):
         sc_style = doc.styles['Source Code']
     sc_style.font.name = 'Courier New'
     sc_style.font.size = Pt(10)
+    set_font_all_ranges(sc_style, 'Courier New')
     sc_style.paragraph_format.line_spacing = 1.0
     sc_style.paragraph_format.space_before = Pt(0)
     sc_style.paragraph_format.space_after = Pt(0)
@@ -206,12 +251,45 @@ def create_reference_doc(output_path):
     vc_style.font.name = 'Courier New'
     vc_style.font.size = Pt(10)
 
+    # --- TOC entry styles (with dot leaders) ---
+    # Text width: 210mm - 30mm(left) - 10mm(right) = 170mm
+    # In twips: 170mm * (1440/25.4) ≈ 9638
+    text_width_twips = 9638
+    for level, indent_cm in [('TOC 1', 0), ('TOC 2', 1.0), ('TOC 3', 2.0)]:
+        if level not in [s.name for s in doc.styles]:
+            toc_entry = doc.styles.add_style(level, 1)
+        else:
+            toc_entry = doc.styles[level]
+        toc_entry.font.name = 'Times New Roman'
+        toc_entry.font.size = Pt(14)
+        set_font_all_ranges(toc_entry, 'Times New Roman')
+        toc_entry.paragraph_format.line_spacing = 1.5
+        toc_entry.paragraph_format.space_before = Pt(0)
+        toc_entry.paragraph_format.space_after = Pt(0)
+        toc_entry.paragraph_format.first_line_indent = Cm(0)
+        if indent_cm > 0:
+            toc_entry.paragraph_format.left_indent = Cm(indent_cm)
+        # Right tab stop with dot leader for page numbers
+        pPr_toc = toc_entry.element.find(qn('w:pPr'))
+        if pPr_toc is None:
+            pPr_toc = toc_entry.element.makeelement(qn('w:pPr'), {})
+            toc_entry.element.append(pPr_toc)
+        tabs = pPr_toc.makeelement(qn('w:tabs'), {})
+        tab = tabs.makeelement(qn('w:tab'), {
+            qn('w:val'): 'right',
+            qn('w:leader'): 'dot',
+            qn('w:pos'): str(text_width_twips),
+        })
+        tabs.append(tab)
+        pPr_toc.append(tabs)
+
     # --- List styles ---
     for list_style_name in ['List Paragraph', 'List Bullet', 'List Number']:
         if list_style_name in [s.name for s in doc.styles]:
             ls = doc.styles[list_style_name]
             ls.font.name = 'Times New Roman'
             ls.font.size = Pt(14)
+            set_font_all_ranges(ls, 'Times New Roman')
             ls.paragraph_format.line_spacing = 1.5
             ls.paragraph_format.space_before = Pt(0)
             ls.paragraph_format.space_after = Pt(0)

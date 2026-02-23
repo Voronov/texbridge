@@ -35,6 +35,7 @@ OUT_PDF     := $(BUILD_DIR)/$(NAME).pdf
 OUT_TEX_DIR := $(BUILD_DIR)/latex
 FIX_SCRIPT  := scripts/fix_roundtrip.py
 PREP_SCRIPT := scripts/preprocess_tex.py
+FIX_DOCX    := scripts/fix_docx.py
 REF_DOCX    := templates/reference.docx
 CROSSREF_CFG:= pandoc-crossref.yaml
 
@@ -46,7 +47,6 @@ PANDOC_TO_DOCX := $(PANDOC_COMMON) \
 	--to=docx \
 	--resource-path=.:sections \
 	--extract-media=media \
-	--number-sections \
 	--reference-doc=../../$(REF_DOCX) \
 	--filter pandoc-crossref \
 	--metadata-file=../../$(CROSSREF_CFG)
@@ -99,6 +99,8 @@ $(OUT_DOCX): $(PREP_TEX) $(wildcard $(SRC_DIR)/*.png $(SRC_DIR)/*.jpg)
 	@echo "📝 Converting LaTeX → DOCX"
 	@mkdir -p $(BUILD_DIR)
 	cd $(PREP_DIR) && pandoc main.tex -o ../../$(OUT_DOCX) $(PANDOC_TO_DOCX) 2>&1 | grep -v "^$$" || true
+	@echo "📄 Adding title page and table of contents..."
+	python3 $(FIX_DOCX) $(OUT_DOCX) $(OUT_DOCX) --src-dir=$(SRC_DIR)
 	cp $(OUT_DOCX) $(NAME).docx
 	@echo "✅ Output: $(NAME).docx"
 

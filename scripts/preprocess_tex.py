@@ -61,6 +61,68 @@ def fix_cyrillic_subscripts(content):
     return content
 
 
+def convert_lstlisting_for_pandoc(content, listing_counter):
+    r"""Convert \begin{lstlisting}[caption={...}] to captioned \begin{verbatim} for pandoc.
+
+    Args:
+        content: LaTeX file content
+        listing_counter: dict {chapter_num: count} shared across files
+    """
+    # Detect chapter number from subsubsection numbering (e.g. \subsubsection*{3.1.1. ...})
+    chapter_match = re.search(r'\\subsubsection\*?\{(\d+)\.', content)
+    chapter_num = int(chapter_match.group(1)) if chapter_match else 0
+
+    def replace_listing(m):
+        caption = m.group(1)
+        code = m.group(2)
+        # Clean LaTeX escapes for pandoc
+        caption = caption.replace(r'\_', '_').replace(r'\#', '#')
+        caption = caption.replace(r'\&', '&').replace(r'\%', '%')
+        # Increment counter
+        if chapter_num not in listing_counter:
+            listing_counter[chapter_num] = 0
+        listing_counter[chapter_num] += 1
+        num = f"{chapter_num}.{listing_counter[chapter_num]}"
+        cap_line = f"\\begin{{center}}\n\\textbf{{Лістинг {num} --- {caption}}}\n\\end{{center}}\n"
+        return f"{cap_line}\\begin{{verbatim}}{code}\\end{{verbatim}}"
+
+    pattern = re.compile(
+        r'\\begin\{lstlisting\}\[caption=\{(.+?)\}\]\s*(.*?)\\end\{lstlisting\}',
+        re.DOTALL
+    )
+    return pattern.sub(replace_listing, content)
+
+
+def strip_titleformat(content):
+    r"""Remove \titleformat commands — they're for xelatex only, pandoc misinterprets them."""
+    content = re.sub(
+        r'\\titleformat\s*\{[^}]*\}\s*\{[^}]*\}\s*\{[^}]*\}\s*\{[^}]*\}\s*\{[^}]*\}',
+        '',
+        content
+    )
+    return content
+
+
+def strip_titlepage_content(content):
+    """Strip titlepage environment and TOC commands — added back by fix_docx.py."""
+    # Remove entire \begin{titlepage}...\end{titlepage}
+    content = re.sub(
+        r'\\begin\{titlepage\}.*?\\end\{titlepage\}',
+        '',
+        content,
+        flags=re.DOTALL
+    )
+    # Remove \tableofcontents and related tocloft commands
+    content = re.sub(r'\\tableofcontents', '', content)
+    content = re.sub(r'\\renewcommand\{\\cfttoctitlefont\}.*', '', content)
+    content = re.sub(r'\\renewcommand\{\\cftaftertoctitle\}.*', '', content)
+    content = re.sub(r'\\renewcommand\{\\contentsname\}.*', '', content)
+    content = re.sub(r'\\setcounter\{page\}\{.*?\}', '', content)
+    content = re.sub(r'\\thispagestyle\{empty\}', '', content)
+    content = re.sub(r'\\newpage', '', content)
+    return content
+
+
 def fix_duplicate_labels(content):
     """Remove duplicate labels, keeping only the first occurrence."""
     seen = set()
@@ -79,16 +141,23 @@ def fix_duplicate_labels(content):
     return '\n'.join(result)
 
 
-def preprocess_file(input_path, output_path):
+def preprocess_file(input_path, output_path, listing_counter=None):
     """Pre-process a single .tex file."""
     with open(input_path, 'r', encoding='utf-8') as f:
         content = f.read()
+
+    # Strip titlepage content (will be added by fix_docx.py post-processor)
+    if os.path.basename(input_path) == 'titlepage.tex':
+        content = strip_titlepage_content(content)
 
     content = fix_figure_placement(content)
     content = fix_escaped_underscores_in_math(content)
     content = fix_math_text_commands(content)
     content = fix_cyrillic_subscripts(content)
     content = fix_duplicate_labels(content)
+    content = strip_titleformat(content)
+    if listing_counter is not None:
+        content = convert_lstlisting_for_pandoc(content, listing_counter)
 
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(content)
@@ -100,9 +169,10 @@ def preprocess_project(src_dir, out_dir):
     sections_out = os.path.join(out_dir, 'sections')
     os.makedirs(sections_out, exist_ok=True)
 
+    listing_counter = {}  # {chapter_num: count}, shared across files
     processed = 0
     for root, dirs, files in os.walk(src_dir):
-        for fname in files:
+        for fname in sorted(files):  # sorted for consistent listing numbering
             if not fname.endswith('.tex'):
                 continue
             src_path = os.path.join(root, fname)
@@ -110,7 +180,7 @@ def preprocess_project(src_dir, out_dir):
             rel = os.path.relpath(src_path, src_dir)
             dst_path = os.path.join(out_dir, rel)
             os.makedirs(os.path.dirname(dst_path), exist_ok=True)
-            preprocess_file(src_path, dst_path)
+            preprocess_file(src_path, dst_path, listing_counter)
             processed += 1
 
     # Symlink images from src to preprocessed dir
